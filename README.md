@@ -1,5 +1,7 @@
 # 247 - Remote Terminal Access for Claude Code
 
+[![Skillselion Top 25](https://skillselion.com/badge/marketplace/QuivrHQ/247-claude-code-remote.svg?award=1)](https://skillselion.com/marketplace/QuivrHQ/247-claude-code-remote)
+
 **Access Claude Code from anywhere - phone, tablet, or any browser. Run AI-assisted coding sessions 24/7 without being tied to your desk.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
