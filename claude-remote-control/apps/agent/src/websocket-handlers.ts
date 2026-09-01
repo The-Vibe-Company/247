@@ -4,7 +4,7 @@
  */
 
 import { WebSocket } from 'ws';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { createTerminal } from './terminal.js';
 import { config } from './config.js';
 import * as sessionsDb from './db/sessions.js';
@@ -33,6 +33,19 @@ function tmuxSessionExists(sessionName: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Get the real cwd of an existing tmux session, or null if unavailable
+ */
+function getTmuxSessionPath(sessionName: string): string | null {
+  try {
+    const output = execFileSync('tmux', ['display-message', '-p', '-t', sessionName, '#{session_path}']);
+    const path = output.toString().trim();
+    return path || null;
+  } catch {
+    return null;
   }
 }
 
@@ -115,7 +128,7 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
 
   // For root terminal, use basePath directly; otherwise append project name
   const basePath = config.projects.basePath.replace('~', process.env.HOME!);
-  const projectPath = isRootTerminal ? basePath : `${basePath}/${project}`;
+  let projectPath = isRootTerminal ? basePath : `${basePath}/${project}`;
 
   console.log(`New terminal connection for project: ${project}`);
   console.log(`Project path: ${projectPath}`);
@@ -145,6 +158,18 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
   // Async initialization
   (async () => {
     const fs = await import('fs');
+
+    // Existing tmux sessions may not live under basePath/project (session
+    // names don't always match project directory names); ask tmux for
+    // the session's real cwd before rejecting the connection.
+    if (!createFlag && tmuxSessionExists(sessionName)) {
+      const tmuxPath = getTmuxSessionPath(sessionName);
+      if (tmuxPath && fs.existsSync(tmuxPath)) {
+        projectPath = tmuxPath;
+        console.log(`Using tmux session path for '${sessionName}': ${projectPath}`);
+      }
+    }
+
     if (!fs.existsSync(projectPath)) {
       console.error(`Path does not exist: ${projectPath}`);
       ws.close(1008, 'Project path not found');
